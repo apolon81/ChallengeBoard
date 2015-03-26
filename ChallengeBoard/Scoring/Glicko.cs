@@ -4,8 +4,8 @@ using ChallengeBoard.Infrastucture;
 
 namespace ChallengeBoard.Scoring
 {
-    [ScoringSystem("Elo","Standard Elo scoring system")]
-    public class StandardElo : IScoringSystem
+    [ScoringSystem("Glicko","Glicko scoring system")]
+    public class Glicko : IScoringSystem
     {
         // Rating Disparity. The higher is F, the easier it is to gain points (or to lose them)
         private const int F = 400;
@@ -13,9 +13,9 @@ namespace ChallengeBoard.Scoring
         /// <summary>
         /// Class for calculating player ELO gain/loss
         /// </summary>
-        public StandardElo(){}
+        public Glicko() { }
 
-        public ScoringResult Calculate(double boardStartingRating, double winnerRating, double loserRating, bool tie = false)
+        private ScoringResult Calculate(double boardStartingRating, double winnerRating, double loserRating, bool tie = false)
         {
             //http://en.wikipedia.org/wiki/Elo_rating_system
             //http://www.chess-mind.com/en/elo-system

@@ -267,6 +267,8 @@
     <Compile Include="Models\ModelExtensions.cs" />
     <Compile Include="Models\Validation\DateBefore.cs" />
     <Compile Include="Models\Validation\DateWithinYear.cs" />
+    <Compile Include="Scoring\IScoringSystem.cs" />
+    <Compile Include="Scoring\Glicko.cs" />
     <Compile Include="Scoring\StandardElo.cs" />
     <Compile Include="Infrastucture\HtmlSanitizer.cs" />
     <Compile Include="Infrastucture\PageHeader.cs" />

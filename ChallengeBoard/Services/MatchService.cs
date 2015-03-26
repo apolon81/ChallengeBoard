@@ -106,21 +106,10 @@ namespace ChallengeBoard.Services
 
             var unresolvedMatches = _repository.GetUnresolvedMatchesByBoardId(boardId, false).ToList();
 
-            // Figure unverified ratings.  Parses and sums unverified matches
-            var unverifiedWinnerRank = winner.CalculateUnverifiedRank(unresolvedMatches);
-            var unverifiedLoserRank = loser.CalculateUnverifiedRank(unresolvedMatches);
+            // TODO: create scoring system through a factory
+            IScoringSystem system = new StandardElo();
 
-            // Run scoring calculation
-            var system = new StandardElo();
-            var eloResult = system.Calculate(board.StartingRating, unverifiedWinnerRank, unverifiedLoserRank, tie);
-
-            match.WinnerRatingDelta = eloResult.WinnerDelta.RoundToWhole();
-            match.LoserRatingDelta = eloResult.LoserDelta.RoundToWhole();
-
-            match.WinnerEstimatedRating = unverifiedWinnerRank + match.WinnerRatingDelta;
-            match.LoserEstimatedRating = unverifiedLoserRank + match.LoserRatingDelta;
-
-            return (match);
+            return system.Calculate(board.StartingRating, match, unresolvedMatches);
         }
 
         public CompetitorStats CalculateCompetitorStats(Competitor competitor, ICollection<Match> matches)
@@ -232,7 +221,8 @@ namespace ChallengeBoard.Services
                     x => new {x.MatchId, x.Created})
                                  .Where(x => x.Created >= rejectedMatch.Created && x.MatchId != rejectedMatch.MatchId);
 
-            var system = new StandardElo();
+            // TODO: create scoring system through a factory
+            IScoringSystem system = new StandardElo();
             
             foreach (var match in matchList)
             {
@@ -243,20 +233,8 @@ namespace ChallengeBoard.Services
                 // Pick out the match to recalc and save
                 var matchToRecalc = unresolvedMatches.First(x => x.MatchId == match.MatchId);
 
-                // Figure unverified ratings.  Parses and sums unverified matches
-                var unverifiedWinnerRank = matchToRecalc.Winner.CalculateUnverifiedRank(filteredUnresolved);
-                var unverifiedLoserRank = matchToRecalc.Loser.CalculateUnverifiedRank(filteredUnresolved);
-
-                // Run the recalc
-                var eloRecalc = system.Calculate(board.StartingRating, unverifiedWinnerRank, unverifiedLoserRank,
-                                                 matchToRecalc.Tied);
-
-                // Update the ratings
-                matchToRecalc.WinnerRatingDelta = eloRecalc.WinnerDelta.RoundToWhole();
-                matchToRecalc.LoserRatingDelta = eloRecalc.LoserDelta.RoundToWhole();
-
-                matchToRecalc.WinnerEstimatedRating = unverifiedWinnerRank + matchToRecalc.WinnerRatingDelta;
-                matchToRecalc.LoserEstimatedRating = unverifiedLoserRank + matchToRecalc.LoserRatingDelta;
+                // Run recalc
+                system.Calculate(board.StartingRating, matchToRecalc, filteredUnresolved);
             }
 
             _repository.CommitChanges();

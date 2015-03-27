@@ -5,6 +5,6 @@ namespace ChallengeBoard.Scoring
 {
     public interface IScoringSystem
     {
-        Match Calculate(double boardStartingRating, Match match, IList<Match> unresolvedMatches);
+        Match Calculate(double boardStartingRating, Match match, IList<Match> unresolvedMatches, Match latestWinnersMatch, Match latestLosersMatch);
     }
 }

@@ -10,6 +10,7 @@ namespace ChallengeBoard.Models
         
         Board GetBoardById(int id);
         Match GetMatchById(int id);
+        Match GetLatestMatchByBoardIdAndCompetitorId(int boardId, int competitorId);
 
         IQueryable<UserProfile> UserProfiles { get; }
         IQueryable<Competitor> Competitors { get; }

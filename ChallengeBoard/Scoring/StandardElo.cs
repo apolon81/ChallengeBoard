@@ -54,7 +54,7 @@ namespace ChallengeBoard.Scoring
             return (KFactor.High);
         }
 
-        Match IScoringSystem.Calculate(double boardStartingRating, Models.Match match, System.Collections.Generic.IList<Models.Match> unresolvedMatches)
+        Match IScoringSystem.Calculate(double boardStartingRating, Models.Match match, System.Collections.Generic.IList<Models.Match> unresolvedMatches, Match latestWinnersMatch, Match latestLosersMatch)
         {
             // Figure unverified ratings.  Parses and sums unverified matches
             var unverifiedWinnerRank = match.Winner.CalculateUnverifiedRank(unresolvedMatches);

@@ -105,11 +105,13 @@ namespace ChallengeBoard.Services
             };
 
             var unresolvedMatches = _repository.GetUnresolvedMatchesByBoardId(boardId, false).ToList();
+            var latestWinnersMatch = _repository.GetLatestMatchByBoardIdAndCompetitorId(boardId, winner.CompetitorId);
+            var latestLosersMatch = _repository.GetLatestMatchByBoardIdAndCompetitorId(boardId, loser.CompetitorId);
 
             // TODO: create scoring system through a factory
-            IScoringSystem system = new StandardElo();
+            IScoringSystem system = new Glicko();
 
-            return system.Calculate(board.StartingRating, match, unresolvedMatches);
+            return system.Calculate(board.StartingRating, match, unresolvedMatches, latestWinnersMatch, latestLosersMatch);
         }
 
         public CompetitorStats CalculateCompetitorStats(Competitor competitor, ICollection<Match> matches)
@@ -222,7 +224,7 @@ namespace ChallengeBoard.Services
                                  .Where(x => x.Created >= rejectedMatch.Created && x.MatchId != rejectedMatch.MatchId);
 
             // TODO: create scoring system through a factory
-            IScoringSystem system = new StandardElo();
+            IScoringSystem system = new Glicko();
             
             foreach (var match in matchList)
             {
@@ -234,7 +236,7 @@ namespace ChallengeBoard.Services
                 var matchToRecalc = unresolvedMatches.First(x => x.MatchId == match.MatchId);
 
                 // Run recalc
-                system.Calculate(board.StartingRating, matchToRecalc, filteredUnresolved);
+                system.Calculate(board.StartingRating, matchToRecalc, filteredUnresolved, matchToRecalc, matchToRecalc); // TODO: final 2 params! fins those latest matches...
             }
 
             _repository.CommitChanges();
@@ -299,6 +301,9 @@ namespace ChallengeBoard.Services
         {
             match.Winner.Rating += match.WinnerRatingDelta;
             match.Loser.Rating += match.LoserRatingDelta;
+
+            match.Winner.Deviance += match.WinnerDevianceDelta;
+            match.Loser.Deviance += match.LoserDevianceDelta;
             
             if (match.Tied)
             {

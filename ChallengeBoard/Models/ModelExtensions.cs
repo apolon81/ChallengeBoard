@@ -74,6 +74,21 @@ namespace ChallengeBoard.Models
                            .Sum(x => x.WinnerRatingDelta));
         }
 
+        public static int CalculateUnverifiedDeviance(this Competitor competitor, IList<Match> matches)
+        {
+            return (competitor.Deviance +
+                    matches.Where(x => x.Loser.ProfileUserId == competitor.ProfileUserId && !x.IsResolved)
+                           .Sum(x => x.LoserDevianceDelta) +
+                    matches.Where(x => x.Winner.ProfileUserId == competitor.ProfileUserId && !x.IsResolved)
+                           .Sum(x => x.WinnerDevianceDelta));
+        }
+
+        public static int CalculateUnverifiedInactivity(this Competitor competitor, Match latestMatch, int ratingPeriod)
+        {
+            // TODO: return 0 here if the user hasn't played any games yet
+            return 1;
+        }
+
         // Match
         public static MatchResults ResultForCompetitor(this Match match, Competitor competitor)
         {

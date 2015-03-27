@@ -1,75 +1,92 @@
 ﻿using System;
 using ChallengeBoard.Models;
 using ChallengeBoard.Infrastucture;
+using System.Collections.Generic;
 
 namespace ChallengeBoard.Scoring
 {
     [ScoringSystem("Glicko","Glicko scoring system")]
     public class Glicko : IScoringSystem
     {
-        // Rating Disparity. The higher is F, the easier it is to gain points (or to lose them)
-        private const int F = 400;
+        // Rating period in days. This is used only to determine the number of rating periods
+        // since last competition in rating deviation formula. Ratings and deviations are
+        // reacalculated on a game by game basis rather then in periods.
+        private int ratingPeriod = 1;
+
+        // This constant influences current rating deviance calculations.
+        private double c = 60.0;
+
+        private double maximumDeviance = 350;
+
+        // TODO: new players: r = 1500, RD = 350
 
         /// <summary>
-        /// Class for calculating player ELO gain/loss
+        /// Class for calculating player Glicko gain/loss
         /// </summary>
         public Glicko() { }
 
-        private ScoringResult Calculate(double boardStartingRating, double winnerRating, double loserRating, bool tie = false)
+        private void Calculate(Dictionary<string, double> playerData, Dictionary<string, double> opponentData, double result)
         {
-            //http://en.wikipedia.org/wiki/Elo_rating_system
-            //http://www.chess-mind.com/en/elo-system
+            double q = 0.0057565;
 
-            var winnerK = CalculateKFactor(boardStartingRating, winnerRating);
-            var loserK = CalculateKFactor(boardStartingRating, loserRating);
+            double g = 1.0 / Math.Sqrt(1 + 3 * q * q * opponentData["rating deviance"] * opponentData["rating deviance"] / (Math.PI * Math.PI));
 
-            var eW = 1 / (1 + Math.Pow(10,(loserRating - winnerRating)/F));
-            var eL = 1 / (1 + Math.Pow(10,(winnerRating - loserRating)/F));
+            double E = 1.0 / (1 + Math.Pow(10.0, -1 * g * (playerData["rating"] - opponentData["rating"]) / 400));
 
-            var results = new ScoringResult();
+            double d = Math.Pow(q * q * g * g * E * (1 - E), -1.0);
 
-            if (!tie)
-            {
-                results.WinnerDelta = Math.Round(winnerK * (1 - eW));
-                results.LoserDelta = Math.Round(loserK * (0 - eL));
-            }
-            else
-            {
-                results.WinnerDelta = Math.Round(winnerK * (.5 - eW));
-                results.LoserDelta = Math.Round(loserK * (.5 - eL));
-            }
+            playerData["rating delta"] = q * g * (result - E) / (1.0 / Math.Pow(playerData["rating deviance"], 2.0) + 1.0 / d); 
 
-            return (results);
+            double newDeviance = Math.Sqrt(Math.Pow(1.0 / Math.Pow(playerData["rating deviance"], 2.0) + 1.0 / d, -1.0));
+
+            playerData["rating deviance delta"] = newDeviance - playerData["rating deviance"];
         }
 
-        private static int CalculateKFactor(double boardStartingRating, double competitorRating)
+        Match IScoringSystem.Calculate(double boardStartingRating, Models.Match match, System.Collections.Generic.IList<Models.Match> unresolvedMatches, Match latestWinnersMatch, Match latestLosersMatch)
         {
-            // Game Importance.
-            if (competitorRating >= (boardStartingRating * 1.5)) // 2400
-                return (KFactor.Low);
+
+            // Determine unverified information about the winner
+            var winnerData = new Dictionary<string, double>();
+            GatherPlayerData(winnerData, match.Winner, unresolvedMatches, latestWinnersMatch);
             
-            if (competitorRating >= (boardStartingRating * 1.3125)) // 2100
-                return (KFactor.Medium);
+            // Determine unverified information about the loser
+            var loserData = new Dictionary<string, double>();
+            GatherPlayerData(loserData, match.Loser, unresolvedMatches, latestLosersMatch);
 
-            return (KFactor.High);
-        }
+            // Calculate the current rating deviance (pre match)
+            winnerData["rating deviance"] = CalculateCurrentRatingDeviance(winnerData["rating deviance"], (int)winnerData["rating periods passed"]);
+            loserData["rating deviance"] = CalculateCurrentRatingDeviance(loserData["rating deviance"], (int)loserData["rating periods passed"]);
 
-        Match IScoringSystem.Calculate(double boardStartingRating, Models.Match match, System.Collections.Generic.IList<Models.Match> unresolvedMatches)
-        {
-            // Figure unverified ratings.  Parses and sums unverified matches
-            var unverifiedWinnerRank = match.Winner.CalculateUnverifiedRank(unresolvedMatches);
-            var unverifiedLoserRank = match.Loser.CalculateUnverifiedRank(unresolvedMatches);
-
-            var eloResult = Calculate(boardStartingRating, unverifiedWinnerRank, unverifiedLoserRank, match.Tied);
+            Calculate(winnerData, loserData, match.Tied ? 0.5 : 1);
+            Calculate(loserData, winnerData, match.Tied ? 0.5 : 0);
 
             // Update the ratings
-            match.WinnerRatingDelta = eloResult.WinnerDelta.RoundToWhole();
-            match.LoserRatingDelta = eloResult.LoserDelta.RoundToWhole();
+            match.WinnerRatingDelta = winnerData["rating delta"].RoundToWhole();
+            match.LoserRatingDelta = loserData["rating delta"].RoundToWhole();
 
-            match.WinnerEstimatedRating = unverifiedWinnerRank + match.WinnerRatingDelta;
-            match.LoserEstimatedRating = unverifiedLoserRank + match.LoserRatingDelta;
+            match.WinnerEstimatedRating = (int)winnerData["rating"] + match.WinnerRatingDelta;
+            match.LoserEstimatedRating = (int)loserData["rating"] + match.LoserRatingDelta;
+
+            // Update the rating deviances
+            match.WinnerDevianceDelta = winnerData["rating deviance delta"].RoundToWhole();
+            match.LoserDevianceDelta = loserData["rating deviance delta"].RoundToWhole();
+
+            match.WinnerEstimatedDeviance = (int)winnerData["rating deviance"] + match.WinnerDevianceDelta;
+            match.LoserEstimatedDeviance = (int)loserData["rating deviance"] + match.LoserDevianceDelta;
 
             return match;
+        }
+
+        private void GatherPlayerData(Dictionary<string, double> data, Competitor competitor, System.Collections.Generic.IList<Models.Match> unresolvedMatches, Match latestMatch)
+        {
+            data.Add("rating", competitor.CalculateUnverifiedRank(unresolvedMatches));
+            data.Add("rating deviance", competitor.CalculateUnverifiedDeviance(unresolvedMatches));
+            data.Add("rating periods passed", competitor.CalculateUnverifiedInactivity(latestMatch, ratingPeriod));
+        }
+
+        private double CalculateCurrentRatingDeviance(double lastKnownDeviance, int ratingPeriodsPassed)
+        {
+            return Math.Min(Math.Sqrt(lastKnownDeviance * lastKnownDeviance + c * c * ratingPeriodsPassed), maximumDeviance);
         }
     }
 }

@@ -93,6 +93,7 @@ namespace ChallengeBoard.Controllers
                 {
                     Name = User.Identity.Name,
                     Rating = board.StartingRating,
+                    Deviance = 350,
                     Profile = _repository.UserProfiles.FindProfile(User.Identity.Name)
                 };
 
@@ -168,6 +169,7 @@ namespace ChallengeBoard.Controllers
                 {
                     Name = User.Identity.Name,
                     Rating = existingBoard.StartingRating,
+                    Deviance = 350,
                     Profile = userProfile
                 });
             }

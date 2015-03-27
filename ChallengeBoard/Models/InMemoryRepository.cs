@@ -151,6 +151,14 @@ namespace ChallengeBoard.Models
             return (Matches.Where(x => !x.Resolved.HasValue));
         }
 
+        public Match GetLatestMatchByBoardIdAndCompetitorId(int boardId, int competitorId)
+        {
+            return Matches.Where(x => x.Board.BoardId == boardId &&
+                (x.Winner.CompetitorId == competitorId || x.Loser.CompetitorId == competitorId) &&
+                !x.Rejected)
+                .OrderByDescending(x => x.Created).FirstOrDefault();
+        }
+
         public Match GetMatchById(int id)
         {
             return (Matches.FirstOrDefault(x => x.MatchId == id));

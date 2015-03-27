@@ -13,12 +13,20 @@ namespace ChallengeBoard.Models
 
         public int WinnerRatingDelta { get; set; }
         public int LoserRatingDelta { get; set; }
+        public int WinnerDevianceDelta { get; set; }
+        public int LoserDevianceDelta { get; set; }
 
         [Display(Name = "Rating")]
         public int WinnerEstimatedRating { get; set; }
         
         [Display(Name = "Rating")]
         public int LoserEstimatedRating { get; set; }
+
+        [Display(Name = "Rating Deviance")]
+        public int WinnerEstimatedDeviance { get; set; }
+
+        [Display(Name = "Rating Deviance")]
+        public int LoserEstimatedDeviance { get; set; }
 
         [Display(Name = "Reporter")]
         public Competitor Winner { get; set; }

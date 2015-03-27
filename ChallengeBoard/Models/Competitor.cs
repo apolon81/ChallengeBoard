@@ -29,6 +29,9 @@ namespace ChallengeBoard.Models
         [Display(Name = "Rating")]
         public int Rating { get; set; }
 
+        [Display(Name = "Rating Deviance")]
+        public int Deviance { get; set; }
+
         [Display(Name = "Joined")]
         [DisplayFormat(DataFormatString = "{0:g}", ApplyFormatInEditMode = true)]
         public DateTime Joined { get; set; }
